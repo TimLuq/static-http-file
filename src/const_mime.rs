@@ -1,4 +1,3 @@
-
 /// Detects the mime type of a file based on its extension or magic bytes.
 pub const fn detect_mime_type(path: &str, data: &[u8]) -> Option<&'static str> {
     let ext = detect_mime_type_ext(path);
@@ -8,21 +7,38 @@ pub const fn detect_mime_type(path: &str, data: &[u8]) -> Option<&'static str> {
     detect_mime_type_magic(data)
 }
 
-/// Detects the mime type of a file based on its extension.
-pub const fn detect_mime_type_ext(path: &str) -> Option<&'static str> {
+/// Returns the extension of a file, if any is found.
+pub const fn file_ext(path: &'_ str) -> Option<&'_ str> {
     let pathb = path.as_bytes();
     let mut i = pathb.len();
-    let ext = loop {
+    loop {
         if i == 0 {
             return None;
         }
         let i2 = i - 1;
-        if pathb[i2] == b'.' {
-            break unsafe { core::slice::from_raw_parts(pathb.as_ptr().add(i), pathb.len() - i) };
+        let b = pathb[i2];
+        if b == b'.' {
+            return Some(unsafe {
+                core::str::from_utf8_unchecked(core::slice::from_raw_parts(
+                    pathb.as_ptr().add(i),
+                    pathb.len() - i,
+                ))
+            });
         }
-        i = i2;
+        if b != b'/' && b != b'\\' {
+            i = i2;
+            continue;
+        }
+        return None;
+    }
+}
+
+/// Detects the mime type of a file based on its extension.
+pub const fn detect_mime_type_ext(path: &str) -> Option<&'static str> {
+    let Some(ext) = file_ext(path) else {
+        return None;
     };
-    match ext {
+    match ext.as_bytes() {
         // common web formats
         b"css" => Some("text/css"),
         b"html" | b"htm" => Some("text/html"),
@@ -74,7 +90,9 @@ pub const fn detect_mime_type_ext(path: &str) -> Option<&'static str> {
         b"odt" => Some("application/vnd.oasis.opendocument.text"),
         b"pdf" => Some("application/pdf"),
         b"ppt" => Some("application/vnd.ms-powerpoint"),
-        b"pptx" => Some("application/vnd.openxmlformats-officedocument.presentationml.presentation"),
+        b"pptx" => {
+            Some("application/vnd.openxmlformats-officedocument.presentationml.presentation")
+        }
         b"rss" => Some("application/rss+xml"),
         b"rtf" => Some("application/rtf"),
         b"txt" => Some("text/plain"),
@@ -120,7 +138,6 @@ pub const fn detect_mime_type_ext(path: &str) -> Option<&'static str> {
     }
 }
 
-
 type MagicLookup = (MagicOffset, &'static [u8], Magic);
 
 enum Magic {
@@ -151,28 +168,92 @@ const RIFF: &[MagicLookup] = &[
 ];
 
 const XML: &[MagicLookup] = &[
-    (MagicOffset::Before(46), b"<!DOCTYPE html", Magic::Mime("application/xhtml+xml")),
-    (MagicOffset::Before(46), b"<!DOCTYPE svg", Magic::Mime("image/svg+xml")),
-    (MagicOffset::Before(120), b"xmlns=\"http://www.w3.org/1999/html\"", Magic::Mime("application/xhtml+xml")),
-    (MagicOffset::Before(120), b"xmlns=\"http://www.w3.org/2000/svg\"", Magic::Mime("image/svg+xml")),
-    (MagicOffset::Before(46), b"<html", Magic::Mime("application/xhtml+xml")),
-    (MagicOffset::Before(46), b"<svg", Magic::Mime("image/svg+xml")),
+    (
+        MagicOffset::Before(46),
+        b"<!DOCTYPE html",
+        Magic::Mime("application/xhtml+xml"),
+    ),
+    (
+        MagicOffset::Before(46),
+        b"<!DOCTYPE svg",
+        Magic::Mime("image/svg+xml"),
+    ),
+    (
+        MagicOffset::Before(120),
+        b"xmlns=\"http://www.w3.org/1999/html\"",
+        Magic::Mime("application/xhtml+xml"),
+    ),
+    (
+        MagicOffset::Before(120),
+        b"xmlns=\"http://www.w3.org/2000/svg\"",
+        Magic::Mime("image/svg+xml"),
+    ),
+    (
+        MagicOffset::Before(46),
+        b"<html",
+        Magic::Mime("application/xhtml+xml"),
+    ),
+    (
+        MagicOffset::Before(46),
+        b"<svg",
+        Magic::Mime("image/svg+xml"),
+    ),
 ];
 
 const MAGICS: &[MagicLookup] = &[
-    (MagicOffset::At(0), b"\0\0\x01\xBA", Magic::Mime("video/mpeg")),
-    (MagicOffset::At(0), b"\0\0\x01\xBB", Magic::Mime("video/mpeg")),
+    (
+        MagicOffset::At(0),
+        b"\0\0\x01\xBA",
+        Magic::Mime("video/mpeg"),
+    ),
+    (
+        MagicOffset::At(0),
+        b"\0\0\x01\xBB",
+        Magic::Mime("video/mpeg"),
+    ),
     (MagicOffset::At(0), b"\0asm", Magic::Mime("text/x-asm")),
-    (MagicOffset::At(0), b"\x1A\x45\xDF\xA3", Magic::Mime("video/webm")),
-    (MagicOffset::At(0), b"\x1F\x8B\x08", Magic::Mime("application/x-gzip")),
-    (MagicOffset::At(0), b"#!/bin/bash\n", Magic::Mime("application/x-sh")),
-    (MagicOffset::At(0), b"#!/bin/sh\n", Magic::Mime("application/x-sh")),
-    (MagicOffset::At(0), b"7z\xBC\xAF\x27\x1C", Magic::Mime("application/x-7z-compressed")),
-    (MagicOffset::At(0), b"<?xml", Magic::Specialized(Some("text/xml"), XML)),
-    (MagicOffset::At(0), b"<!DOCTYPE html", Magic::Mime("text/html")),
+    (
+        MagicOffset::At(0),
+        b"\x1A\x45\xDF\xA3",
+        Magic::Mime("video/webm"),
+    ),
+    (
+        MagicOffset::At(0),
+        b"\x1F\x8B\x08",
+        Magic::Mime("application/x-gzip"),
+    ),
+    (
+        MagicOffset::At(0),
+        b"#!/bin/bash\n",
+        Magic::Mime("application/x-sh"),
+    ),
+    (
+        MagicOffset::At(0),
+        b"#!/bin/sh\n",
+        Magic::Mime("application/x-sh"),
+    ),
+    (
+        MagicOffset::At(0),
+        b"7z\xBC\xAF\x27\x1C",
+        Magic::Mime("application/x-7z-compressed"),
+    ),
+    (
+        MagicOffset::At(0),
+        b"<?xml",
+        Magic::Specialized(Some("text/xml"), XML),
+    ),
+    (
+        MagicOffset::At(0),
+        b"<!DOCTYPE html",
+        Magic::Mime("text/html"),
+    ),
     (MagicOffset::At(0), b"<html", Magic::Mime("text/html")),
     (MagicOffset::At(0), b"<svg", Magic::Mime("image/svg+xml")),
-    (MagicOffset::At(0), b"BZh", Magic::Mime("application/x-bzip2")),
+    (
+        MagicOffset::At(0),
+        b"BZh",
+        Magic::Mime("application/x-bzip2"),
+    ),
     (MagicOffset::At(0), b"GIF87a", Magic::Mime("image/gif")),
     (MagicOffset::At(0), b"GIF89a", Magic::Mime("image/gif")),
     (MagicOffset::At(0), b"I I", Magic::Mime("image/tiff")),
@@ -181,21 +262,41 @@ const MAGICS: &[MagicLookup] = &[
     (MagicOffset::At(0), b"MM\0*", Magic::Mime("image/tiff")),
     (MagicOffset::At(0), b"MM\0+", Magic::Mime("image/tiff")),
     (MagicOffset::At(0), b"MThd", Magic::Mime("audio/midi")),
-    (MagicOffset::At(0), b"OggS\0\x02\0\0\0\0\0\0\0\0", Magic::Mime("application/ogg")),
-    (MagicOffset::At(0), b"PK\x03\x04", Magic::Mime("application/ogg")),
+    (
+        MagicOffset::At(0),
+        b"OggS\0\x02\0\0\0\0\0\0\0\0",
+        Magic::Mime("application/ogg"),
+    ),
+    (
+        MagicOffset::At(0),
+        b"PK\x03\x04",
+        Magic::Mime("application/ogg"),
+    ),
     (MagicOffset::At(0), b"RIFF", Magic::Specialized(None, RIFF)),
-    (MagicOffset::At(0), b"Rar!\x1A\x07", Magic::Mime("application/vnd.rar")),
+    (
+        MagicOffset::At(0),
+        b"Rar!\x1A\x07",
+        Magic::Mime("application/vnd.rar"),
+    ),
     (MagicOffset::At(0), b"gimp xcf ", Magic::Mime("image/x-xcf")),
     (MagicOffset::At(0), b"icns", Magic::Mime("image/x-icns")),
     (MagicOffset::At(0), b"true\0", Magic::Mime("font/ttf")),
     (MagicOffset::At(0), b"wOFF", Magic::Mime("font/woff")),
     (MagicOffset::At(0), b"wOF2", Magic::Mime("font/woff2")),
     (MagicOffset::At(0), b"%PDF-", Magic::Mime("application/pdf")),
-    (MagicOffset::At(0), b"%PNG\x0D\x0A\x1A\x0A", Magic::Mime("image/png")),
+    (
+        MagicOffset::At(0),
+        b"%PNG\x0D\x0A\x1A\x0A",
+        Magic::Mime("image/png"),
+    ),
     (MagicOffset::At(0), b"\xFF\xD8", Magic::Mime("image/jpeg")),
     (MagicOffset::At(4), b"ftyp", Magic::Specialized(None, FTYP)),
     (MagicOffset::At(4), b"moov", Magic::Mime("video/quicktime")),
-    (MagicOffset::At(257), b"ustar", Magic::Mime("video/quicktime")),
+    (
+        MagicOffset::At(257),
+        b"ustar",
+        Magic::Mime("application/x-tar"),
+    ),
 ];
 
 /// Detects the mime type of a file based on its magic bytes.
@@ -209,7 +310,11 @@ pub const fn detect_mime_type_magic(data: &[u8]) -> Option<&'static str> {
     }
 }
 
-const fn lookup_magic(magics: &[MagicLookup], data_len: usize, data_ptr: *const u8) -> Option<&'static str> {
+const fn lookup_magic(
+    magics: &[MagicLookup],
+    data_len: usize,
+    data_ptr: *const u8,
+) -> Option<&'static str> {
     let mut i = 0;
     loop {
         if i == magics.len() {

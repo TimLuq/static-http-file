@@ -1,7 +1,10 @@
-
 const BASE64URL: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
-pub const fn b64url_const<const S: usize>(data: &[u8], mut trg: [u8; S], offset: usize) -> ([u8; S], usize) {
+pub const fn b64url_const<const S: usize>(
+    data: &[u8],
+    mut trg: [u8; S],
+    offset: usize,
+) -> ([u8; S], usize) {
     if offset >= S {
         panic!("Offset too large");
     }

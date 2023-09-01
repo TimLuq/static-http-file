@@ -10,7 +10,12 @@ pub struct ConstHttpFile {
 }
 
 impl ConstHttpFile {
-    pub const fn new_named(data: &'static [u8], mime: &'static str, etag: &'static str, file: &'static str) -> Self {
+    pub const fn new_named(
+        data: &'static [u8],
+        mime: &'static str,
+        etag: &'static str,
+        file: &'static str,
+    ) -> Self {
         ConstHttpFile {
             file: Some(file),
             data,
@@ -56,6 +61,10 @@ impl HttpFile<'static> for ConstHttpFile {
     fn into_data(self) -> crate::FileData<'static> {
         crate::FileData::Static(self.data)
     }
+
+    fn clone_data(&self) -> crate::FileData<'static> {
+        crate::FileData::Static(self.data)
+    }
 }
 
 #[macro_export]
@@ -68,7 +77,10 @@ macro_rules! const_http_file {
     ($file:literal) => {{
         const __FILE_BYTES: &[u8] = include_bytes!($file);
         const __FILE_ETAG: &str = $crate::const_etag!(__FILE_BYTES);
-        const __FILE_MIME: &str = $crate::const_or_str($crate::detect_mime_type($file, __FILE_BYTES), "application/octet-data");
+        const __FILE_MIME: &str = $crate::const_or_str(
+            $crate::detect_mime_type($file, __FILE_BYTES),
+            "application/octet-data",
+        );
         $crate::ConstHttpFile::new_named(__FILE_BYTES, __FILE_MIME, __FILE_ETAG, $file)
     }};
     ($file:expr, $mime:expr) => {{
@@ -79,7 +91,10 @@ macro_rules! const_http_file {
     ($file:expr) => {{
         const __FILE_BYTES: &[u8] = $file;
         const __FILE_ETAG: &str = $crate::const_etag!(__FILE_BYTES);
-        const __FILE_MIME: &str = $crate::const_or_str($crate::detect_mime_type_magic(__FILE_BYTES), "application/octet-data");
+        const __FILE_MIME: &str = $crate::const_or_str(
+            $crate::detect_mime_type_magic(__FILE_BYTES),
+            "application/octet-data",
+        );
         $crate::ConstHttpFile::new(__FILE_BYTES, __FILE_MIME, __FILE_ETAG)
     }};
 }
