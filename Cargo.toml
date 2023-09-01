@@ -1,0 +1,13 @@
+[package]
+name = "static-http-file"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70.0"
+license = "MIT OR LGPL-3.0-or-later"
+description = "A library for handling static files as http::Response, including const fn support."
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+http = "0.2.9"
+xxhash-rust = { version = "0.8.6", features = ["const_xxh3"] }
