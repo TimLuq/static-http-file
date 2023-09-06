@@ -1,5 +1,10 @@
 const BASE64URL: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
+/// Encode a byte slice as base64url.
+/// The output buffer size `S` must be at least 4/3 the size of the input otherwise this function will panic.
+/// The returned offset is the number of bytes written to the output buffer.
+///
+/// This can be used in constant contexts when the input is a constant byte slice of a known length.
 pub const fn b64url_const<const S: usize>(
     data: &[u8],
     mut trg: [u8; S],

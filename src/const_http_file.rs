@@ -1,5 +1,10 @@
+use bytedata::ByteData;
+
 use crate::HttpFile;
 
+/// A static HTTP file that can be computed at compile time or in other constant contexts.
+///
+/// The easiest way to create a `ConstHttpFile` is with the [`const_http_file!`] macro.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 #[non_exhaustive]
 pub struct ConstHttpFile {
@@ -10,6 +15,7 @@ pub struct ConstHttpFile {
 }
 
 impl ConstHttpFile {
+    /// Create a new [`ConstHttpFile`] with an explicit filename.
     pub const fn new_named(
         data: &'static [u8],
         mime: &'static str,
@@ -24,6 +30,7 @@ impl ConstHttpFile {
         }
     }
 
+    /// Create a new [`ConstHttpFile`] without an explicit filename.
     pub const fn new(data: &'static [u8], mime: &'static str, etag: &'static str) -> Self {
         ConstHttpFile {
             file: None,
@@ -58,15 +65,35 @@ impl HttpFile<'static> for ConstHttpFile {
         self.data
     }
 
-    fn into_data(self) -> crate::FileData<'static> {
-        crate::FileData::Static(self.data)
+    fn into_data(self) -> ByteData<'static> {
+        ByteData::Static(self.data)
     }
 
-    fn clone_data(&self) -> crate::FileData<'static> {
-        crate::FileData::Static(self.data)
+    fn clone_data(&self) -> ByteData<'static> {
+        ByteData::Static(self.data)
     }
 }
 
+/// Create a [`ConstHttpFile`] from a file path or bytes. An explicit MIME type can also be provided.
+///
+/// If no MIME type is provided, it will be detected from the file extension or file contents.
+///
+/// # Examples
+///
+/// ```
+/// # use static_http_file::{ConstHttpFile, const_http_file};
+/// /// Explicit MIME type provided.
+/// const FILE_0: ConstHttpFile = const_http_file!("../.gitignore", "text/plain; charset=utf-8");
+///
+/// /// No MIME type provided, so it will be detected from the file extension or file contents.
+/// /// Unfortunately, `.gitignore` files are not in the detection list for file extensions and have no detectable early content,
+/// /// so the MIME type will default to `application/octet-data`.
+/// const FILE_1: ConstHttpFile = const_http_file!("../.gitignore");
+///
+/// const FILE_2_BYTES: &[u8] = include_bytes!("../.gitignore");
+/// /// If the first argument is a non-literal expression, it will be used as the file contents instead of as a build-time path.
+/// const FILE_2: ConstHttpFile = const_http_file!(FILE_2_BYTES, "text/plain; charset=utf-8");
+/// ```
 #[macro_export]
 macro_rules! const_http_file {
     ($file:literal, $mime:expr) => {{

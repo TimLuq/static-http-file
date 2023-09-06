@@ -57,4 +57,11 @@ fn test_const_http_file() {
     assert_eq!(file.mime, "application/octet-data");
     assert_eq!(file.etag.len(), 12);
     assert_eq!(file.data.len(), 20);
+
+    const GITIGNORE_CONTENTS: &[u8] = include_bytes!("../.gitignore");
+    assert_eq!(file.data, GITIGNORE_CONTENTS);
+    let file1 = const_http_file!(GITIGNORE_CONTENTS);
+    assert_eq!(file1.mime, file.mime);
+    assert_eq!(file1.etag, file.etag);
+    assert_eq!(file1.data, file.data);
 }
