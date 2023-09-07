@@ -3,7 +3,7 @@ use std::{fs::File, path::Path};
 use alloc::borrow::Cow;
 use bytedata::ByteData;
 
-use crate::HttpFile;
+use crate::{HttpFile, HttpFileResponse};
 
 /// A static HTTP file that can be computed at compile time or in other constant contexts.
 ///
@@ -101,6 +101,8 @@ impl HttpFile<'static> for StdHttpFile {
         self.data.clone()
     }
 }
+
+impl HttpFileResponse<'static> for StdHttpFile {}
 
 fn read_file(path: &Path) -> std::io::Result<bytedata::SharedBytes> {
     let mut builder = bytedata::SharedBytesBuilder::new();

@@ -10,6 +10,9 @@ pub use traits::*;
 mod const_http_file;
 pub use const_http_file::ConstHttpFile;
 
+mod cachebusted_http_file;
+pub use cachebusted_http_file::QueryCacheBustedHttpFile;
+
 mod const_etag;
 pub use const_etag::*;
 
@@ -30,14 +33,6 @@ pub use self::tokio_1::*;
 mod expose;
 #[cfg(feature = "expose")]
 pub use self::expose::*;
-
-/// Simple helper function to return a constant string or a default string.
-pub const fn const_or_str<'a>(value: Option<&'a str>, default: &'a str) -> &'a str {
-    match value {
-        Some(value) => value,
-        None => default,
-    }
-}
 
 #[cfg(test)]
 mod test;

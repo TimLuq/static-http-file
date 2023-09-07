@@ -1,10 +1,11 @@
+use core::num::NonZeroU8;
 use std::path::Path;
 
 use alloc::borrow::Cow;
 use bytedata::ByteData;
 
 use super::super::std::{compute_etag_nonconst, StdHttpFile};
-use crate::HttpFile;
+use crate::{HttpFile, HttpFileResponse};
 
 /// A static HTTP file that can be computed at compile time or in other constant contexts.
 ///
@@ -94,24 +95,83 @@ impl TokioHttpFile {
 }
 
 impl HttpFile<'static> for TokioHttpFile {
+    #[inline]
     fn content_type(&self) -> &str {
         self.inner.mime.as_ref()
     }
 
+    #[inline]
     fn etag(&self) -> &str {
         self.inner.etag.as_ref()
     }
 
+    #[inline]
     fn data(&self) -> &[u8] {
         self.inner.data.as_slice()
     }
 
+    #[inline]
     fn into_data(self) -> ByteData<'static> {
         self.inner.into_data()
     }
 
+    #[inline]
     fn clone_data(&self) -> ByteData<'static> {
         self.inner.data.clone()
+    }
+}
+
+impl HttpFileResponse<'static> for TokioHttpFile {
+    #[inline]
+    fn respond_guard<T: From<ByteData<'static>>>(
+        &self,
+        request: &http::Request<()>,
+    ) -> Result<http::response::Builder, Result<http::Response<T>, http::Error>> {
+        self.inner.respond_guard(request)
+    }
+
+    #[inline]
+    fn respond<T: From<ByteData<'static>>>(
+        self,
+        request: &http::Request<()>,
+    ) -> Result<http::Response<T>, http::Error> {
+        self.inner.respond(request)
+    }
+
+    #[inline]
+    fn respond_borrowed<T: From<ByteData<'static>>>(
+        &self,
+        request: &http::Request<()>,
+    ) -> Result<http::Response<T>, http::Error> {
+        self.inner.respond_borrowed(request)
+    }
+
+    #[inline]
+    fn response_headers(&self, response: http::response::Builder) -> http::response::Builder {
+        self.inner.response_headers(response)
+    }
+
+    #[inline]
+    fn into_response<T: From<ByteData<'static>>>(self) -> Result<http::Response<T>, http::Error> {
+        self.inner.into_response()
+    }
+
+    #[inline]
+    fn cachebust_uri<T: From<ByteData<'static>>>(
+        &self,
+        old_uri: &http::Uri,
+        query_key: &str,
+    ) -> Option<Result<http::Response<T>, http::Error>> {
+        self.inner.cachebust_uri(old_uri, query_key)
+    }
+
+    #[inline]
+    fn cachebust_suffix<T: From<ByteData<'static>>>(
+        &self,
+        old_uri: &http::Uri,
+        left_sep: Option<NonZeroU8>,
+    ) -> Option<Result<http::Response<T>, http::Error>> {
+        self.inner.cachebust_suffix(old_uri, left_sep)
     }
 }
 

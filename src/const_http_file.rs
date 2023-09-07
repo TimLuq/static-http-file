@@ -1,6 +1,6 @@
 use bytedata::ByteData;
 
-use crate::HttpFile;
+use crate::{HttpFile, HttpFileResponse};
 
 /// A static HTTP file that can be computed at compile time or in other constant contexts.
 ///
@@ -39,6 +39,16 @@ impl ConstHttpFile {
             etag,
         }
     }
+
+    pub const fn const_etag_str(&self) -> &'static str {
+        if self.etag.is_empty() || !bytedata::const_starts_with(self.etag.as_bytes(), b"\"") {
+            self.etag
+        } else if let Some(a) = bytedata::const_slice_str(self.etag, 1..(self.etag.len() - 1)).ok() {
+            a
+        } else {
+            panic!("Invalid etag in ConstHttpFile")
+        }
+    }
 }
 
 impl Default for ConstHttpFile {
@@ -74,6 +84,8 @@ impl HttpFile<'static> for ConstHttpFile {
     }
 }
 
+impl HttpFileResponse<'static> for ConstHttpFile {}
+
 /// Create a [`ConstHttpFile`] from a file path or bytes. An explicit MIME type can also be provided.
 ///
 /// If no MIME type is provided, it will be detected from the file extension or file contents.
@@ -104,7 +116,7 @@ macro_rules! const_http_file {
     ($file:literal) => {{
         const __FILE_BYTES: &[u8] = include_bytes!($file);
         const __FILE_ETAG: &str = $crate::const_etag!(__FILE_BYTES);
-        const __FILE_MIME: &str = $crate::const_or_str(
+        const __FILE_MIME: &str = ::bytedata::const_or_str(
             $crate::detect_mime_type($file, __FILE_BYTES),
             "application/octet-data",
         );
@@ -118,7 +130,7 @@ macro_rules! const_http_file {
     ($file:expr) => {{
         const __FILE_BYTES: &[u8] = $file;
         const __FILE_ETAG: &str = $crate::const_etag!(__FILE_BYTES);
-        const __FILE_MIME: &str = $crate::const_or_str(
+        const __FILE_MIME: &str = ::bytedata::const_or_str(
             $crate::detect_mime_type_magic(__FILE_BYTES),
             "application/octet-data",
         );

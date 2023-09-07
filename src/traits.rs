@@ -1,15 +1,15 @@
 use core::num::NonZeroU8;
 
 use alloc::string::String;
-use bytedata::ByteData;
+use bytedata::{ByteData, StringData};
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq, Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Default)]
 pub enum CacheBusting {
     #[default]
     None,
     /// Cachebust by using the etag in the query string.
     /// If used as `Query("foo")`, the query string will be something like `?foo=q25fZAd-fY`.
-    Query(&'static str),
+    Query(StringData<'static>),
     /// Cachebust by using the etag in the filename.
     /// The first byte of the suffix is the separator between the basename and the etag.
     /// The request path is expected to always contain an etag.
@@ -33,8 +33,8 @@ pub trait HttpFile<'a> {
         }
     }
     /// Returns the cache busting method.
-    fn cache_busting(&self) -> CacheBusting {
-        CacheBusting::None
+    fn cache_busting(&self) -> &CacheBusting {
+        &CacheBusting::None
     }
     /// Extracts the data of the file.
     fn into_data(self) -> ByteData<'a>;
@@ -60,12 +60,12 @@ pub trait HttpFileResponse<'a>: HttpFile<'a> + Sized {
         match self.cache_busting() {
             CacheBusting::None => {}
             CacheBusting::Query(query_key) => {
-                if let Some(res) = self.cachebust_uri(request.uri(), query_key) {
+                if let Some(res) = self.cachebust_uri(request.uri(), query_key.as_str()) {
                     return Err(res);
                 }
             }
             CacheBusting::Suffix(left_sep) => {
-                if let Some(res) = self.cachebust_suffix(request.uri(), left_sep) {
+                if let Some(res) = self.cachebust_suffix(request.uri(), *left_sep) {
                     return Err(res);
                 }
             }
@@ -128,7 +128,7 @@ pub trait HttpFileResponse<'a>: HttpFile<'a> + Sized {
                 http::header::ETAG,
                 http::header::HeaderValue::from_str(self.etag()).unwrap(),
             );
-        if self.cache_busting() != CacheBusting::None {
+        if !matches!(self.cache_busting(), CacheBusting::None) {
             response.header(
                 http::header::CACHE_CONTROL,
                 http::header::HeaderValue::from_static("public, max-age=31536000, immutable"),
