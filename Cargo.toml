@@ -11,7 +11,7 @@ description = "A library for handling static files as http::Response, including 
 [dependencies]
 http = "0.2.9"
 xxhash-rust = { version = "0.8.6", features = ["const_xxh3"] }
-bytedata = { version = "0.1.0", git = "https://github.com/TimLuq/bytedata.git" }
+bytedata = { version = "0.1.0", git = "https://github.com/TimLuq/bytedata.git", features = ["alloc"] }
 bytes_1 = { package = "bytes", version = "^1.2", optional = true }
 tokio_1 = { package = "tokio", version = "^1.20", optional = true, features = ["io-util", "fs", "parking_lot"] }
 notify = { package = "notify", version = "^6.0", optional = true }
