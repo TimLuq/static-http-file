@@ -11,6 +11,44 @@ pub struct QueryCacheBustedHttpFile<T> {
     inner: T,
 }
 
+impl QueryCacheBustedHttpFile<super::ConstHttpFile> {
+    /// Const specialization of [`HttpFile::content_type`].
+    #[inline]
+    pub const fn const_content_type(&self) -> &str {
+        self.inner.mime
+    }
+
+    /// Const specialization of [`HttpFile::etag`].
+    #[inline]
+    pub const fn const_etag(&self) -> &str {
+        self.inner.etag
+    }
+
+    /// Const specialization of [`HttpFile::etag_str`].
+    #[inline]
+    pub const fn const_etag_str(&self) -> &str {
+        self.inner.const_etag_str()
+    }
+
+    /// Const specialization of [`HttpFile::cache_busting`].
+    #[inline]
+    pub const fn const_cache_busting(&self) -> &CacheBusting {
+        &self.cbust
+    }
+
+    /// Const specialization of [`HttpFile::data`].
+    #[inline]
+    pub const fn const_data(&self) -> &'_ [u8] {
+        self.inner.data
+    }
+
+    /// Const specialization of [`HttpFile::clone_data`].
+    #[inline]
+    pub const fn const_clone_data(&'static self) -> ByteData<'static> {
+        ByteData::from_static(self.inner.data)
+    }
+}
+
 impl<'l, T: HttpFileResponse<'l>> QueryCacheBustedHttpFile<T> {
     /// Create a new [`QueryCacheBustedHttpFile`] from a precomputed URL.
     /// The URL must contain a query parameter matching the `query_var` parameter with the exact unquoted etag as value.
