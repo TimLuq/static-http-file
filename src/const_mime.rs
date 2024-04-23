@@ -327,7 +327,7 @@ const fn lookup_magic(
                 continue;
             }
             MagicOffset::At(offset) => {
-                if !bytes_matches(unsafe { data_ptr.add(*offset) }, magic) {
+                if !unsafe { bytes_matches(data_ptr.add(*offset), magic) } {
                     i += 1;
                     continue;
                 }
@@ -342,7 +342,7 @@ const fn lookup_magic(
                 let mx = if offset < mx { offset } else { mx };
                 let mut j = 0;
                 let is_matching = loop {
-                    if !bytes_matches(unsafe { data_ptr.add(j) }, magic) {
+                    if !unsafe { bytes_matches(data_ptr.add(j), magic) } {
                         j += 1;
                         if j != mx {
                             continue;
@@ -373,13 +373,13 @@ const fn lookup_magic(
     }
 }
 
-const fn bytes_matches(lhs: *const u8, rhs: &[u8]) -> bool {
+const unsafe fn bytes_matches(lhs: *const u8, rhs: &[u8]) -> bool {
     let mut i = 0;
     loop {
         if i == rhs.len() {
             return true;
         }
-        if unsafe { *lhs.add(i) } != rhs[i] {
+        if *lhs.add(i) != rhs[i] {
             return false;
         }
         i += 1;
