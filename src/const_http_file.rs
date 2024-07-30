@@ -76,11 +76,11 @@ impl HttpFile<'static> for ConstHttpFile {
     }
 
     fn into_data(self) -> ByteData<'static> {
-        ByteData::Static(self.data)
+        ByteData::from_static(self.data)
     }
 
     fn clone_data(&self) -> ByteData<'static> {
-        ByteData::Static(self.data)
+        ByteData::from_static(self.data)
     }
 }
 
