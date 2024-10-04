@@ -1,9 +1,7 @@
-use core::num::NonZeroU8;
-
 use alloc::format;
 use bytedata::{ByteData, StringData};
 
-use crate::{CacheBusting, HttpFile, HttpFileResponse};
+use crate::{CacheBusting, HttpFile};
 
 pub struct QueryCacheBustedHttpFile<T> {
     url: StringData<'static>,
@@ -49,7 +47,7 @@ impl QueryCacheBustedHttpFile<super::ConstHttpFile> {
     }
 }
 
-impl<'l, T: HttpFileResponse<'l>> QueryCacheBustedHttpFile<T> {
+impl<'a, T: HttpFile<'a>> QueryCacheBustedHttpFile<T> {
     /// Create a new [`QueryCacheBustedHttpFile`] from a precomputed URL.
     /// The URL must contain a query parameter matching the `query_var` parameter with the exact unquoted etag as value.
     pub const fn new_const(
@@ -90,7 +88,7 @@ impl<'l, T: HttpFileResponse<'l>> QueryCacheBustedHttpFile<T> {
     }
 }
 
-impl<'l, T: HttpFileResponse<'l>> HttpFile<'l> for QueryCacheBustedHttpFile<T> {
+impl<'l, T: HttpFile<'l>> HttpFile<'l> for QueryCacheBustedHttpFile<T> {
     #[inline]
     fn content_type(&self) -> &str {
         self.inner.content_type()
@@ -127,59 +125,70 @@ impl<'l, T: HttpFileResponse<'l>> HttpFile<'l> for QueryCacheBustedHttpFile<T> {
     }
 }
 
-impl<'l, T: HttpFileResponse<'l>> HttpFileResponse<'l> for QueryCacheBustedHttpFile<T> {
-    #[inline]
-    fn respond_guard<R: From<ByteData<'l>>>(
-        &self,
-        request: &http::Request<()>,
-    ) -> Result<http::response::Builder, Result<http::Response<R>, http::Error>> {
-        self.inner.respond_guard(request)
-    }
 
-    #[inline]
-    fn respond<R: From<ByteData<'l>>>(
-        self,
-        request: &http::Request<()>,
-    ) -> Result<http::Response<R>, http::Error> {
-        self.inner.respond(request)
-    }
+#[cfg(any(feature = "http_02", feature = "http_1"))]
+macro_rules! wrap_resp {
+    ($($t:tt)+) => {
+        impl<'l, T: crate::$($t)*::HttpFileResponse<'l>> crate::$($t)*::HttpFileResponse<'l> for QueryCacheBustedHttpFile<T> {
+            #[inline]
+            fn respond_guard<R: From<ByteData<'l>>>(
+                &self,
+                request: &$($t)*::Request<()>,
+            ) -> Result<$($t)*::response::Builder, Result<$($t)*::Response<R>, $($t)*::Error>> {
+                self.inner.respond_guard(request)
+            }
 
-    #[inline]
-    fn respond_borrowed<R: From<ByteData<'l>>>(
-        &self,
-        request: &http::Request<()>,
-    ) -> Result<http::Response<R>, http::Error> {
-        self.inner.respond_borrowed(request)
-    }
+            #[inline]
+            fn respond<R: From<ByteData<'l>>>(
+                self,
+                request: &$($t)*::Request<()>,
+            ) -> Result<$($t)*::Response<R>, $($t)*::Error> {
+                self.inner.respond(request)
+            }
 
-    #[inline]
-    fn response_headers(&self, response: http::response::Builder) -> http::response::Builder {
-        self.inner.response_headers(response)
-    }
+            #[inline]
+            fn respond_borrowed<R: From<ByteData<'l>>>(
+                &self,
+                request: &$($t)*::Request<()>,
+            ) -> Result<$($t)*::Response<R>, $($t)*::Error> {
+                self.inner.respond_borrowed(request)
+            }
 
-    #[inline]
-    fn into_response<R: From<ByteData<'l>>>(self) -> Result<http::Response<R>, http::Error> {
-        self.inner.into_response()
-    }
+            #[inline]
+            fn response_headers(&self, response: $($t)*::response::Builder) -> $($t)*::response::Builder {
+                self.inner.response_headers(response)
+            }
 
-    #[inline]
-    fn cachebust_uri<R: From<ByteData<'l>>>(
-        &self,
-        old_uri: &http::Uri,
-        query_key: &str,
-    ) -> Option<Result<http::Response<R>, http::Error>> {
-        self.inner.cachebust_uri(old_uri, query_key)
-    }
+            #[inline]
+            fn into_response<R: From<ByteData<'l>>>(self) -> Result<$($t)*::Response<R>, $($t)*::Error> {
+                self.inner.into_response()
+            }
 
-    #[inline]
-    fn cachebust_suffix<R: From<ByteData<'l>>>(
-        &self,
-        old_uri: &http::Uri,
-        left_sep: Option<NonZeroU8>,
-    ) -> Option<Result<http::Response<R>, http::Error>> {
-        self.inner.cachebust_suffix(old_uri, left_sep)
-    }
+            #[inline]
+            fn cachebust_uri<R: From<ByteData<'l>>>(
+                &self,
+                old_uri: &$($t)*::Uri,
+                query_key: &str,
+            ) -> Option<Result<$($t)*::Response<R>, $($t)*::Error>> {
+                self.inner.cachebust_uri(old_uri, query_key)
+            }
+
+            #[inline]
+            fn cachebust_suffix<R: From<ByteData<'l>>>(
+                &self,
+                old_uri: &$($t)*::Uri,
+                left_sep: Option<core::num::NonZeroU8>,
+            ) -> Option<Result<$($t)*::Response<R>, $($t)*::Error>> {
+                self.inner.cachebust_suffix(old_uri, left_sep)
+            }
+        }
+    };
 }
+
+#[cfg(feature = "http_02")]
+wrap_resp!(http_02);
+#[cfg(feature = "http_1")]
+wrap_resp!(http_1);
 
 
 /// Create a [`ConstHttpFile`] from a file path. An explicit MIME type can also be provided.

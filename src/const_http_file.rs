@@ -1,6 +1,6 @@
 use bytedata::ByteData;
 
-use crate::{HttpFile, HttpFileResponse};
+use crate::HttpFile;
 
 /// A static HTTP file that can be computed at compile time or in other constant contexts.
 ///
@@ -84,7 +84,10 @@ impl HttpFile<'static> for ConstHttpFile {
     }
 }
 
-impl HttpFileResponse<'static> for ConstHttpFile {}
+#[cfg(feature = "http_02")]
+impl crate::http_02::HttpFileResponse<'static> for ConstHttpFile {}
+#[cfg(feature = "http_1")]
+impl crate::http_1::HttpFileResponse<'static> for ConstHttpFile {}
 
 /// Create a [`ConstHttpFile`] from a file path or bytes. An explicit MIME type can also be provided.
 ///

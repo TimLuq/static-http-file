@@ -1,11 +1,10 @@
-use core::num::NonZeroU8;
 use std::path::Path;
 
 use alloc::borrow::Cow;
 use bytedata::ByteData;
 
 use super::super::std::{compute_etag_nonconst, StdHttpFile};
-use crate::{HttpFile, HttpFileResponse};
+use crate::HttpFile;
 
 /// A static HTTP file that can be computed at compile time or in other constant contexts.
 ///
@@ -121,58 +120,63 @@ impl HttpFile<'static> for TokioHttpFile {
     }
 }
 
-impl HttpFileResponse<'static> for TokioHttpFile {
-    #[inline]
-    fn respond_guard<T: From<ByteData<'static>>>(
-        &self,
-        request: &http::Request<()>,
-    ) -> Result<http::response::Builder, Result<http::Response<T>, http::Error>> {
-        self.inner.respond_guard(request)
-    }
+#[cfg(any(feature = "http_02", feature = "http_1"))]
+macro_rules! wrap_resp {
+    ($($t:tt)+) => {
+        impl crate::$($t)*::HttpFileResponse<'static> for TokioHttpFile {
+            #[inline]
+            fn respond_guard<T: From<ByteData<'static>>>(
+                &self,
+                request: &$($t)*::Request<()>,
+            ) -> Result<$($t)*::response::Builder, Result<$($t)*::Response<T>, $($t)*::Error>> {
+                self.inner.respond_guard(request)
+            }
 
-    #[inline]
-    fn respond<T: From<ByteData<'static>>>(
-        self,
-        request: &http::Request<()>,
-    ) -> Result<http::Response<T>, http::Error> {
-        self.inner.respond(request)
-    }
+            #[inline]
+            fn respond<T: From<ByteData<'static>>>(
+                self,
+                request: &$($t)*::Request<()>,
+            ) -> Result<$($t)*::Response<T>, $($t)*::Error> {
+                self.inner.respond(request)
+            }
 
-    #[inline]
-    fn respond_borrowed<T: From<ByteData<'static>>>(
-        &self,
-        request: &http::Request<()>,
-    ) -> Result<http::Response<T>, http::Error> {
-        self.inner.respond_borrowed(request)
-    }
+            #[inline]
+            fn respond_borrowed<T: From<ByteData<'static>>>(
+                &self,
+                request: &$($t)*::Request<()>,
+            ) -> Result<$($t)*::Response<T>, $($t)*::Error> {
+                self.inner.respond_borrowed(request)
+            }
 
-    #[inline]
-    fn response_headers(&self, response: http::response::Builder) -> http::response::Builder {
-        self.inner.response_headers(response)
-    }
+            #[inline]
+            fn response_headers(&self, response: $($t)*::response::Builder) -> $($t)*::response::Builder {
+                self.inner.response_headers(response)
+            }
 
-    #[inline]
-    fn into_response<T: From<ByteData<'static>>>(self) -> Result<http::Response<T>, http::Error> {
-        self.inner.into_response()
-    }
+            #[inline]
+            fn into_response<T: From<ByteData<'static>>>(self) -> Result<$($t)*::Response<T>, $($t)*::Error> {
+                self.inner.into_response()
+            }
 
-    #[inline]
-    fn cachebust_uri<T: From<ByteData<'static>>>(
-        &self,
-        old_uri: &http::Uri,
-        query_key: &str,
-    ) -> Option<Result<http::Response<T>, http::Error>> {
-        self.inner.cachebust_uri(old_uri, query_key)
-    }
+            #[inline]
+            fn cachebust_uri<T: From<ByteData<'static>>>(
+                &self,
+                old_uri: &$($t)*::Uri,
+                query_key: &str,
+            ) -> Option<Result<$($t)*::Response<T>, $($t)*::Error>> {
+                self.inner.cachebust_uri(old_uri, query_key)
+            }
 
-    #[inline]
-    fn cachebust_suffix<T: From<ByteData<'static>>>(
-        &self,
-        old_uri: &http::Uri,
-        left_sep: Option<NonZeroU8>,
-    ) -> Option<Result<http::Response<T>, http::Error>> {
-        self.inner.cachebust_suffix(old_uri, left_sep)
-    }
+            #[inline]
+            fn cachebust_suffix<T: From<ByteData<'static>>>(
+                &self,
+                old_uri: &$($t)*::Uri,
+                left_sep: Option<NonZeroU8>,
+            ) -> Option<Result<$($t)*::Response<T>, $($t)*::Error>> {
+                self.inner.cachebust_suffix(old_uri, left_sep)
+            }
+        }
+    };
 }
 
 async fn read_file(path: &Path) -> std::io::Result<bytedata::SharedBytes> {

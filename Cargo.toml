@@ -1,6 +1,6 @@
 [package]
 name = "static-http-file"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 rust-version = "1.70.0"
 license = "MIT OR LGPL-3.0-or-later"
@@ -9,7 +9,8 @@ description = "A library for handling static files as http::Response, including 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-http = "0.2.9"
+http_02 = { version = "^0.2.9", package = "http", optional = true }
+http_1 = { version = "^1.0", package = "http", optional = true }
 xxhash-rust = { version = "0.8.6", features = ["const_xxh3"] }
 bytedata = { version = "0.1.0", git = "https://github.com/TimLuq/bytedata.git", features = ["alloc"] }
 bytes_1 = { package = "bytes", version = "^1.2", optional = true }
@@ -19,7 +20,10 @@ regex = { version = "^1.5", optional = true }
 parking_lot = { package = "parking_lot", version = "0.12.1", optional = true }
 
 [features]
-default = []
+default = ["http_02_reexport"]
+http_02 = ["dep:http_02"]
+http_02_reexport = ["http_02"]
+http_1 = ["dep:http_1"]
 std = ["dep:bytes_1", "xxhash-rust/xxh3", "bytedata/bytes_1"]
 tokio_1 = ["dep:tokio_1", "std"]
 expose = ["dep:notify", "std", "dep:regex", "dep:parking_lot"]
