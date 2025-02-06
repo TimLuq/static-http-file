@@ -22,6 +22,9 @@ pub use const_etag::*;
 mod const_b64;
 pub use const_b64::*;
 
+mod shared_http_file;
+pub use shared_http_file::SharedHttpFile;
+
 #[cfg(feature = "std")]
 mod std;
 #[cfg(feature = "std")]
