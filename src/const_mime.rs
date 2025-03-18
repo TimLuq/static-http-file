@@ -63,10 +63,14 @@ pub const fn detect_mime_type_ext(path: &str) -> Option<&'static str> {
         b"avif" => Some("image/avif"),
         b"apng" => Some("image/apng"),
         b"bmp" => Some("image/bmp"),
-        b"png" => Some("image/png"),
-        b"jpg" | b"jpeg" => Some("image/jpeg"),
+        b"eps" | b"epsf" => Some("application/eps"),
         b"gif" => Some("image/gif"),
+        b"heic" | b"heif" => Some("image/heic"),
+        b"icns" => Some("image/x-icns"),
         b"ico" => Some("image/vnd.microsoft.icon"),
+        b"jpg" | b"jpeg" => Some("image/jpeg"),
+        b"png" => Some("image/png"),
+        b"ps" => Some("application/postscript"),
         b"svg" => Some("image/svg+xml"),
         b"tiff" | b"tif" => Some("image/tiff"),
         b"webp" => Some("image/webp"),
@@ -151,13 +155,13 @@ enum MagicOffset {
 }
 
 const FTYP: &[MagicLookup] = &[
-    (MagicOffset::At(4), b"avif", Magic::Mime("image/avif")),
-    (MagicOffset::At(4), b"heic", Magic::Mime("image/heic")),
-    (MagicOffset::At(4), b"isom", Magic::Mime("video/mp4")),
-    (MagicOffset::At(4), b"mp41", Magic::Mime("video/mp4")),
-    (MagicOffset::At(4), b"mp42", Magic::Mime("video/mp4")),
-    (MagicOffset::At(4), b"mmp4", Magic::Mime("video/mp4")),
-    (MagicOffset::At(4), b"M4A", Magic::Mime("audio/mp4")),
+    (MagicOffset::At(0), b"avif", Magic::Mime("image/avif")),
+    (MagicOffset::At(0), b"heic", Magic::Mime("image/heic")),
+    (MagicOffset::At(0), b"isom", Magic::Mime("video/mp4")),
+    (MagicOffset::At(0), b"mp41", Magic::Mime("video/mp4")),
+    (MagicOffset::At(0), b"mp42", Magic::Mime("video/mp4")),
+    (MagicOffset::At(0), b"mmp4", Magic::Mime("video/mp4")),
+    (MagicOffset::At(0), b"M4A", Magic::Mime("audio/mp4")),
 ];
 
 const RIFF: &[MagicLookup] = &[
@@ -165,6 +169,11 @@ const RIFF: &[MagicLookup] = &[
     (MagicOffset::At(4), b"CDDA", Magic::Mime("audio/aiff")),
     (MagicOffset::At(4), b"WAVE", Magic::Mime("audio/wav")),
     (MagicOffset::At(4), b"WEBP", Magic::Mime("image/webp")),
+];
+
+const POSTSCRIPT: &[MagicLookup] = &[
+    (MagicOffset::At(10), b" EPSF-", Magic::Mime("application/eps")),
+    (MagicOffset::At(0), b"", Magic::Mime("application/postscript")),
 ];
 
 const XML: &[MagicLookup] = &[
@@ -259,6 +268,7 @@ const MAGICS: &[MagicLookup] = &[
     (MagicOffset::At(0), b"I I", Magic::Mime("image/tiff")),
     (MagicOffset::At(0), b"ID3", Magic::Mime("audio/mp3")),
     (MagicOffset::At(0), b"II*\0", Magic::Mime("image/tiff")),
+    (MagicOffset::At(0), b"II+\0", Magic::Mime("image/tiff")),
     (MagicOffset::At(0), b"MM\0*", Magic::Mime("image/tiff")),
     (MagicOffset::At(0), b"MM\0+", Magic::Mime("image/tiff")),
     (MagicOffset::At(0), b"MThd", Magic::Mime("audio/midi")),
@@ -280,16 +290,19 @@ const MAGICS: &[MagicLookup] = &[
     ),
     (MagicOffset::At(0), b"gimp xcf ", Magic::Mime("image/x-xcf")),
     (MagicOffset::At(0), b"icns", Magic::Mime("image/x-icns")),
+    (MagicOffset::At(0), b"\0\0\x01\0", Magic::Mime("image/vnd.microsoft.icon")),
+    (MagicOffset::At(0), b"BM", Magic::Mime("image/bmp")),
     (MagicOffset::At(0), b"true\0", Magic::Mime("font/ttf")),
     (MagicOffset::At(0), b"wOFF", Magic::Mime("font/woff")),
     (MagicOffset::At(0), b"wOF2", Magic::Mime("font/woff2")),
     (MagicOffset::At(0), b"%PDF-", Magic::Mime("application/pdf")),
     (
         MagicOffset::At(0),
-        b"%PNG\x0D\x0A\x1A\x0A",
+        b"\x89PNG\x0D\x0A\x1A\x0A",
         Magic::Mime("image/png"),
     ),
-    (MagicOffset::At(0), b"\xFF\xD8", Magic::Mime("image/jpeg")),
+    (MagicOffset::At(0), b"\xFF\xD8\xFF", Magic::Mime("image/jpeg")),
+    (MagicOffset::At(0), b"%!PS", Magic::Specialized(None, POSTSCRIPT)),
     (MagicOffset::At(4), b"ftyp", Magic::Specialized(None, FTYP)),
     (MagicOffset::At(4), b"moov", Magic::Mime("video/quicktime")),
     (
@@ -321,7 +334,7 @@ const fn lookup_magic(
             return None;
         }
         let (offset, magic, magic_type) = &magics[i];
-        match offset {
+        let offset = match offset {
             MagicOffset::At(offset) if *offset + magic.len() > data_len => {
                 i += 1;
                 continue;
@@ -331,6 +344,7 @@ const fn lookup_magic(
                     i += 1;
                     continue;
                 }
+                *offset + magic.len()
             }
             MagicOffset::Before(_) if magic.len() > data_len => {
                 i += 1;
@@ -356,14 +370,15 @@ const fn lookup_magic(
                     i += 1;
                     continue;
                 }
+                j + magic.len()
             }
-        }
+        };
         match magic_type {
             Magic::Mime(mime) => {
                 return Some(mime);
             }
             Magic::Specialized(mime, magics) => {
-                let r = lookup_magic(magics, data_len, data_ptr);
+                let r = lookup_magic(magics, data_len - offset, unsafe { data_ptr.add(offset) });
                 if r.is_some() {
                     return r;
                 }
