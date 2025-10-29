@@ -27,4 +27,3 @@ pub trait HttpFile<'a> {
     /// Clones the data of the file. This may only copy the reference.
     fn clone_data(&self) -> ByteData<'a>;
 }
-

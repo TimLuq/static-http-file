@@ -43,7 +43,8 @@ impl ConstHttpFile {
     pub const fn const_etag_str(&self) -> &'static str {
         if self.etag.is_empty() || !bytedata::const_starts_with(self.etag.as_bytes(), b"\"") {
             self.etag
-        } else if let Some(a) = bytedata::const_slice_str(self.etag, 1..(self.etag.len() - 1)).ok() {
+        } else if let Some(a) = bytedata::const_slice_str(self.etag, 1..(self.etag.len() - 1)).ok()
+        {
             a
         } else {
             panic!("Invalid etag in ConstHttpFile")

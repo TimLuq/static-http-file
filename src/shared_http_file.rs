@@ -41,7 +41,9 @@ impl<'a> SharedHttpFile<'a> {
     pub const fn const_etag_str(&self) -> &str {
         if self.etag.is_empty() || !bytedata::const_starts_with(self.etag.as_bytes(), b"\"") {
             self.etag.as_str()
-        } else if let Some(a) = bytedata::const_slice_str(self.etag.as_str(), 1..(self.etag.len() - 1)).ok() {
+        } else if let Some(a) =
+            bytedata::const_slice_str(self.etag.as_str(), 1..(self.etag.len() - 1)).ok()
+        {
             a
         } else {
             panic!("Invalid etag in SharedHttpFile")

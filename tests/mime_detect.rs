@@ -1,4 +1,4 @@
-use static_http_file::{detect_mime_type_magic, detect_mime_type_ext};
+use static_http_file::{detect_mime_type_ext, detect_mime_type_magic};
 
 static DETECT_MIME_TYPE: &[(&str, &str)] = &[
     ("./assets/pixel/pixel.avif", "image/avif"),
@@ -23,5 +23,5 @@ fn test_detect_mime_type_pixel() {
         assert_eq!(mime_path, Some(*mime));
         let mime_type = detect_mime_type_magic(&data);
         assert_eq!(mime_type, Some(*mime));
-    };
+    }
 }

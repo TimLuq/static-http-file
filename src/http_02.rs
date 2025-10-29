@@ -1,5 +1,5 @@
-use core::num::NonZeroU8;
 use alloc::string::String;
+use core::num::NonZeroU8;
 
 use bytedata::ByteData;
 

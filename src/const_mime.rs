@@ -172,8 +172,16 @@ const RIFF: &[MagicLookup] = &[
 ];
 
 const POSTSCRIPT: &[MagicLookup] = &[
-    (MagicOffset::At(10), b" EPSF-", Magic::Mime("application/eps")),
-    (MagicOffset::At(0), b"", Magic::Mime("application/postscript")),
+    (
+        MagicOffset::At(10),
+        b" EPSF-",
+        Magic::Mime("application/eps"),
+    ),
+    (
+        MagicOffset::At(0),
+        b"",
+        Magic::Mime("application/postscript"),
+    ),
 ];
 
 const XML: &[MagicLookup] = &[
@@ -290,7 +298,11 @@ const MAGICS: &[MagicLookup] = &[
     ),
     (MagicOffset::At(0), b"gimp xcf ", Magic::Mime("image/x-xcf")),
     (MagicOffset::At(0), b"icns", Magic::Mime("image/x-icns")),
-    (MagicOffset::At(0), b"\0\0\x01\0", Magic::Mime("image/vnd.microsoft.icon")),
+    (
+        MagicOffset::At(0),
+        b"\0\0\x01\0",
+        Magic::Mime("image/vnd.microsoft.icon"),
+    ),
     (MagicOffset::At(0), b"BM", Magic::Mime("image/bmp")),
     (MagicOffset::At(0), b"true\0", Magic::Mime("font/ttf")),
     (MagicOffset::At(0), b"wOFF", Magic::Mime("font/woff")),
@@ -301,8 +313,16 @@ const MAGICS: &[MagicLookup] = &[
         b"\x89PNG\x0D\x0A\x1A\x0A",
         Magic::Mime("image/png"),
     ),
-    (MagicOffset::At(0), b"\xFF\xD8\xFF", Magic::Mime("image/jpeg")),
-    (MagicOffset::At(0), b"%!PS", Magic::Specialized(None, POSTSCRIPT)),
+    (
+        MagicOffset::At(0),
+        b"\xFF\xD8\xFF",
+        Magic::Mime("image/jpeg"),
+    ),
+    (
+        MagicOffset::At(0),
+        b"%!PS",
+        Magic::Specialized(None, POSTSCRIPT),
+    ),
     (MagicOffset::At(4), b"ftyp", Magic::Specialized(None, FTYP)),
     (MagicOffset::At(4), b"moov", Magic::Mime("video/quicktime")),
     (

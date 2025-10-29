@@ -125,7 +125,6 @@ impl<'l, T: HttpFile<'l>> HttpFile<'l> for QueryCacheBustedHttpFile<T> {
     }
 }
 
-
 #[cfg(any(feature = "http_02", feature = "http_1"))]
 macro_rules! wrap_resp {
     ($($t:tt)+) => {
@@ -189,7 +188,6 @@ macro_rules! wrap_resp {
 wrap_resp!(http_02);
 #[cfg(feature = "http_1")]
 wrap_resp!(http_1);
-
 
 /// Create a [`ConstHttpFile`] from a file path. An explicit MIME type can also be provided.
 ///
