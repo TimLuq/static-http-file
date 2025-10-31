@@ -1,4 +1,4 @@
-use core::hint::assert_unchecked;
+use core::iter::FusedIterator;
 
 /// Encodes the first part of the input bytes as URL-encoded bytes,
 /// returning a tuple of the encoded part and the remaining unencoded part.
@@ -14,7 +14,7 @@ pub fn urlencode_iter_fn<'a>(
     let bytes = input.as_slice();
     let mut i = 0;
     loop {
-        unsafe { assert_unchecked(i <= bytes.len()) };
+        // unsafe { core::hint::assert_unchecked(i <= bytes.len()) }; // 1.81+
         if i == bytes.len() {
             return (
                 unsafe { bytedata::StringData::from_bytedata_unchecked(input) },
@@ -40,8 +40,8 @@ pub fn urlencode_iter_fn<'a>(
     let mut encoded = [0u8; 12];
     let mut enc_i = 0;
     loop {
-        unsafe { assert_unchecked(i < bytes.len()) };
-        unsafe { assert_unchecked(enc_i < encoded.len()) };
+        // unsafe { core::hint::assert_unchecked(i < bytes.len()) }; // 1.81+
+        // unsafe { core::hint::assert_unchecked(enc_i < encoded.len()) }; // 1.81+
         let b = bytes[i];
         encoded[enc_i] = b'%';
         encoded[enc_i + 1] = match (b >> 4) & 0x0F {
@@ -126,7 +126,7 @@ pub fn urldecode_iter_fn<'a>(
     let bytes = input.as_slice();
     let mut i = 0;
     loop {
-        unsafe { assert_unchecked(i <= bytes.len()) };
+        // unsafe { core::hint::assert_unchecked(i <= bytes.len()) }; // 1.81+
         if i == bytes.len() {
             return (input, bytedata::ByteData::empty());
         }
@@ -147,7 +147,7 @@ pub fn urldecode_iter_fn<'a>(
         if i + 2 >= bytes.len() {
             break;
         }
-        unsafe { assert_unchecked(dec_i < decoded.len()) };
+        // unsafe { core::hint::assert_unchecked(dec_i < decoded.len()) }; // 1.81+
         let hi = bytes[i + 1];
         let lo = bytes[i + 2];
         let hi_val = match hi {
@@ -173,10 +173,10 @@ pub fn urldecode_iter_fn<'a>(
         return (bytedata::ByteData::empty(), input);
     }
     input.make_sliced(i..);
-    return (
+    (
         bytedata::ByteData::from_chunk_slice(&decoded[0..dec_i]),
         input,
-    );
+    )
 }
 
 /// URL-decodes the given input bytes, returning a `ByteQueue` containing the decoded data.
@@ -231,3 +231,69 @@ pub fn urldecode_queue_into<'a>(
     }
     Ok(())
 }
+
+/// Parses a URL query string from the given `StringQueue`, returning an optional tuple of the key and value.
+pub fn parse_query_string_iter_fn<'a>(
+    input: &mut bytedata::StringQueue<'a>,
+) -> Option<(bytedata::ByteData<'a>, Option<bytedata::ByteData<'a>>)> {
+    loop {
+        let fst = input.front()?;
+        let (ch, ln) = bytedata::const_utf8_char_next(fst.as_bytes());
+        if ch == b'&' as u32 {
+            input.drain(0..ln as usize);
+            continue;
+        }
+        break;
+    }
+    if input.is_empty() {
+        return None;
+    }
+    let end_start = input.chars_indecies().find(|&(_, c)| c == '&' || c == '=').map(|(i, _)| i).unwrap_or(input.len());
+    let mut key = input.split_off(end_start);
+    core::mem::swap(&mut key, input);
+    let val = if input.starts_with("=") {
+        input.drain(0..1);
+        let end_start = input.chars_indecies().find(|&(_, c)| c == '&').map(|(i, _)| i).unwrap_or(input.len());
+        let mut value = input.split_off(end_start);
+        core::mem::swap(&mut value, input);
+        let value = urldecode_queue(value.into_bytequeue()).ok()?;
+        Some(bytedata::ByteData::from(value))
+    } else {
+        None
+    };
+    while let Some(fst) = input.front() {
+        let (ch, ln) = bytedata::const_utf8_char_next(fst.as_bytes());
+        if ch == b'&' as u32 {
+            input.drain(0..ln as usize);
+            continue;
+        }
+        break;
+    }
+    let key = bytedata::ByteData::from(urldecode_queue(key.into_bytequeue()).ok()?);
+    Some((key, val))
+}
+
+pub struct QueryStringIterator<'a> {
+    input: bytedata::StringQueue<'a>,
+}
+impl<'a> QueryStringIterator<'a> {
+    #[inline]
+    pub const fn new(input: bytedata::StringQueue<'a>) -> Self {
+        Self { input }
+    }
+}
+impl<'a> Iterator for QueryStringIterator<'a> {
+    type Item = (bytedata::ByteData<'a>, Option<bytedata::ByteData<'a>>);
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.input.is_empty() {
+                return None;
+            }
+            if let Some(res) = parse_query_string_iter_fn(&mut self.input) {
+                return Some(res);
+            }
+        }
+    }
+}
+impl<'a> FusedIterator for QueryStringIterator<'a> {}
